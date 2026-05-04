@@ -2,6 +2,7 @@ let capture;
 let facemesh;
 let predictions = [];
 let cameraReady = false; // 新增變數來追蹤攝影機是否準備就緒
+let modelLoaded = false; // 新增變數來追蹤模型是否載入
 let cameraError = false; // 新增變數來追蹤攝影機是否發生錯誤
 
 function setup() {
@@ -28,8 +29,12 @@ function setup() {
     cameraError = true;
   };
 
+  console.log("Initializing FaceMesh model...");
   // 初始化 FaceMesh 模型 (修正為 ml5 v1.0.0+ 的語法)
-  facemesh = ml5.faceMesh(capture, () => console.log("模型準備就緒！"));
+  facemesh = ml5.faceMesh(capture, () => {
+    console.log("FaceMesh 模型準備就緒！");
+    modelLoaded = true;
+  });
   
   // 開始持續偵測
   facemesh.detectStart(capture, results => {
@@ -44,6 +49,7 @@ function draw() {
   let h = height * 0.5;
 
   push();
+  imageMode(CENTER);
   // 將座標中心移至畫布中央
   translate(width / 2, height / 2);
 
@@ -61,14 +67,28 @@ function draw() {
     textSize(24);
     textAlign(CENTER, CENTER);
     text("正在載入相機...", 0, 0);
+  } else if (!modelLoaded) {
+    scale(1, 1); // 確保載入文字不被翻轉
+    fill(0); // 黑色文字
+    textSize(24);
+    textAlign(CENTER, CENTER);
+    text("正在載入臉部辨識模型...", 0, 0);
+  } else if (predictions.length === 0) {
+    scale(1, 1); // 確保訊息不被翻轉
+    fill(0); // 黑色文字
+    text("未偵測到臉部，請確保臉部在畫面中。", 0, 0);
   } else {
-    // 攝影機準備就緒後才繪製影像
+    // 水平翻轉影像（實作左右顛倒）
+    scale(-1, 1);
+
+    // 繪製影像，尺寸為全螢幕的一半
     image(capture, 0, 0, w, h);
 
     // 如果有偵測到臉部，繪製嘴唇連線
     if (predictions.length > 0) {
       let lipIndices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
-      let keypoints = predictions[0].scaledMesh;
+      // ml5 v1.x 的座標存在 keypoints 陣列中
+      let keypoints = predictions[0].keypoints;
 
       stroke(255, 0, 0); // 線條採用紅色
       strokeWeight(1);   // 粗細為 1
@@ -76,10 +96,14 @@ function draw() {
         let startIdx = lipIndices[i];
         let endIdx = lipIndices[(i + 1) % lipIndices.length]; // 取得下一個點，最後一個點連回第一個點
 
-        let x1 = map(keypoints[startIdx][0], 0, capture.width, -w / 2, w / 2);
-        let y1 = map(keypoints[startIdx][1], 0, capture.height, -h / 2, h / 2);
-        let x2 = map(keypoints[endIdx][0], 0, capture.width, -w / 2, w / 2);
-        let y2 = map(keypoints[endIdx][1], 0, capture.height, -h / 2, h / 2);
+        // v1.x 的每個 keypoint 是一個物件 {x, y}
+        let p1 = keypoints[startIdx];
+        let p2 = keypoints[endIdx];
+
+        let x1 = map(p1.x, 0, capture.width, -w / 2, w / 2);
+        let y1 = map(p1.y, 0, capture.height, -h / 2, h / 2);
+        let x2 = map(p2.x, 0, capture.width, -w / 2, w / 2);
+        let y2 = map(p2.y, 0, capture.height, -h / 2, h / 2);
 
         line(x1, y1, x2, y2); // 使用 line 指令串接
       }
