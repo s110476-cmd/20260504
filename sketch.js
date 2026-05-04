@@ -12,6 +12,7 @@ function setup() {
     cameraReady = true;
   });
   capture.size(640, 480); // 設定擷取解析度以利座標計算
+  capture.elt.setAttribute('playsinline', ''); // 修正 iOS 影片無法在網頁內播放的問題
   capture.hide(); // 隱藏預設產生的 HTML 影片元件，只顯示在畫布上
 
   // 監聽攝影機影像元素的 loadedmetadata 事件，檢查是否有影像尺寸
@@ -26,9 +27,12 @@ function setup() {
     console.error("Camera error:", e);
     cameraError = true;
   };
-  // 初始化 FaceMesh 模型
-  facemesh = ml5.facemesh(capture, () => console.log("模型準備就緒！"));
-  facemesh.on("predict", results => {
+
+  // 初始化 FaceMesh 模型 (修正為 ml5 v1.0.0+ 的語法)
+  facemesh = ml5.faceMesh(capture, () => console.log("模型準備就緒！"));
+  
+  // 開始持續偵測
+  facemesh.detectStart(capture, results => {
     predictions = results;
   });
 }
@@ -42,18 +46,16 @@ function draw() {
   push();
   // 將座標中心移至畫布中央
   translate(width / 2, height / 2);
-  // 水平翻轉影像（實作左右顛倒）
-  scale(-1, 1);
-  imageMode(CENTER);
-  // 繪製影像，尺寸為全螢幕的一半
 
   if (cameraError) {
+    scale(1, 1); // 確保錯誤文字不被翻轉
     // 如果有攝影機錯誤，顯示錯誤訊息
     fill(255, 0, 0); // 紅色文字
     textSize(24);
     textAlign(CENTER, CENTER);
     text("相機錯誤或權限被拒絕", 0, 0);
   } else if (!cameraReady) {
+    scale(1, 1); // 確保載入文字不被翻轉
     // 如果攝影機尚未準備就緒，顯示載入訊息
     fill(0); // 黑色文字
     textSize(24);
