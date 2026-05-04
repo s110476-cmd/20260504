@@ -1,7 +1,7 @@
 let capture;
 let faceMesh;
 let faces = [];
-let options = { maxFaces: 1, refineLandmarks: false, flipHorizontal: false };
+let options = { maxFaces: 1, refineLandmarks: true, flipHorizontal: false };
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -38,14 +38,14 @@ function draw() {
   // 繪製影像，尺寸為視窗寬高各 50%
   image(capture, 0, 0, vW, vH);
 
-  // 如果偵測到臉部，則繪製指定點位的連線
+  // 如果偵測到臉部，則根據指定點位繪製紅色連線
   if (faces.length > 0 && faces[0].keypoints) {
     let face = faces[0];
     // 您指定的點位編號
     let indices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
     
-    stroke(255, 0, 0); // 線條採用紅色
-    strokeWeight(1);   // 粗細為1
+    stroke(255, 0, 0); // 設定線條為紅色
+    strokeWeight(1);   // 設定粗細為1
     
     for (let i = 0; i < indices.length - 1; i++) {
       let p1 = face.keypoints[indices[i]];
