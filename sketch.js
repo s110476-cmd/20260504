@@ -51,18 +51,14 @@ function draw() {
     strokeWeight(1);   // 粗細為1
     
     for (let indices of paths) {
-      beginShape();    // 使用 beginShape 可以更穩定地繪製連續線條
-      for (let i = 0; i < indices.length - 1; i++) {
-        let p1 = face.keypoints[indices[i]];
-        let p2 = face.keypoints[indices[i+1]];
-        
-        if (p1 && p2) {
-          // 使用明確的尺寸 640x480 進行映射，避免 capture.width 為 0 的問題
-          let x1 = map(p1.x, 0, 640, -vW / 2, vW / 2);
-          let y1 = map(p1.y, 0, 480, -vH / 2, vH / 2);
-          let x2 = map(p2.x, 0, 640, -vW / 2, vW / 2);
-          let y2 = map(p2.y, 0, 480, -vH / 2, vH / 2);
-          line(x1, y1, x2, y2);
+      beginShape();
+      for (let index of indices) {
+        let p = face.keypoints[index];
+        if (p) {
+          // 將攝影機座標 (640x480) 映射到畫布顯示區域
+          let x = map(p.x, 0, 640, -vW / 2, vW / 2);
+          let y = map(p.y, 0, 480, -vH / 2, vH / 2);
+          vertex(x, y);
         }
       }
       endShape();
