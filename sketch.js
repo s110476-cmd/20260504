@@ -1,80 +1,73 @@
 let capture;
 let faceMesh;
 let faces = [];
+let options = { maxFaces: 1, refineLandmarks: false, flipHorizontal: false };
 
 function setup() {
-  // 建立全螢幕畫布
   createCanvas(windowWidth, windowHeight);
-  // 擷取攝影機影像
   capture = createCapture(VIDEO);
-  // 隱藏預設產生的 HTML 影片標籤，避免重疊顯示
-  capture.hide();
+  capture.size(640, 480);
+  capture.hide(); // 隱藏預設產生的 HTML5 video 標籤，只在畫布上呈現
 
-  // 初始化 FaceMesh 模型並開始偵測
-  faceMesh = ml5.faceMesh(capture, () => console.log("FaceMesh Ready"));
-  faceMesh.detectStart(capture, (results) => faces = results);
+  // 初始化 FaceMesh 模型
+  faceMesh = ml5.faceMesh(capture, options, () => {
+    console.log("模型載入完成");
+  });
+  
+  // 開始持續偵測臉部
+  faceMesh.detectStart(capture, (results) => {
+    faces = results;
+  });
 }
 
 function draw() {
-  // 設定背景顏色為 e7c6ff
   background('#e7c6ff');
 
-  // 計算影像顯示的大小（全螢幕寬高的 50%）
-  const vWidth = width * 0.5;
-  const vHeight = height * 0.5;
-
-  // 計算置中座標
-  const x = (width - vWidth) / 2;
-  const y = (height - vHeight) / 2;
-
   push();
-  // 透過平移到目標位置的右側並反向縮放，實現左右顛倒的鏡像效果
-  translate(x + vWidth, y);
+  // 將座標原點移至畫面中心
+  translate(width / 2, height / 2);
+  // 水平翻轉影像（左右顛倒）
   scale(-1, 1);
-  image(capture, 0, 0, vWidth, vHeight);
+  // 設定 imageMode 為中心繪製
+  imageMode(CENTER);
 
-  // 若偵測到臉部，則根據指定編號畫線
+  let vW = width * 0.5;
+  let vH = height * 0.5;
+
+  // 繪製影像，尺寸為視窗寬高各 50%
+  image(capture, 0, 0, vW, vH);
+
+  // 如果偵測到臉部，則繪製指定點位的連線
   if (faces.length > 0) {
     let face = faces[0];
-    stroke('red'); // 線條採用紅色
-    strokeWeight(15); // 粗細為 15
-    noFill();
-
-    // 指定的關鍵點編號順序
-    const indices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
-
-    for (let i = 0; i < indices.length - 1; i++) {
-      let p1 = face.keypoints[indices[i]];
-      let p2 = face.keypoints[indices[i + 1]];
-
-      // 將座標從攝影機尺寸映射到畫面顯示的尺寸 (50%)
-      let x1 = map(p1.x, 0, capture.width, 0, vWidth);
-      let y1 = map(p1.y, 0, capture.height, 0, vHeight);
-      let x2 = map(p2.x, 0, capture.width, 0, vWidth);
-      let y2 = map(p2.y, 0, capture.height, 0, vHeight);
-
-      line(x1, y1, x2, y2);
-    }
-
-    // 新增：串接另一組編號，線條粗細為 1
-    strokeWeight(1);
-    const indices2 = [76, 77, 90, 180, 85, 16, 315, 404, 320, 307, 306, 408, 304, 303, 302, 11, 72, 73, 74, 184];
-    for (let i = 0; i < indices2.length - 1; i++) {
-      let p1 = face.keypoints[indices2[i]];
-      let p2 = face.keypoints[indices2[i + 1]];
-
-      let x1 = map(p1.x, 0, capture.width, 0, vWidth);
-      let y1 = map(p1.y, 0, capture.height, 0, vHeight);
-      let x2 = map(p2.x, 0, capture.width, 0, vWidth);
-      let y2 = map(p2.y, 0, capture.height, 0, vHeight);
-
-      line(x1, y1, x2, y2);
+    // 定義多組需要連線的點位路徑
+    let paths = [
+      [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291],
+      [76, 77, 90, 180, 85, 16, 315, 404, 320, 307, 306, 408, 304, 303, 302, 11, 72, 73, 74, 184]
+    ];
+    
+    stroke(255, 0, 0); // 線條採用紅色
+    strokeWeight(1);   // 粗細為1
+    
+    for (let indices of paths) {
+      for (let i = 0; i < indices.length - 1; i++) {
+        let p1 = face.keypoints[indices[i]];
+        let p2 = face.keypoints[indices[i+1]];
+        
+        if (p1 && p2) {
+          // 將攝影機原始座標映射到縮放後的畫布顯示區域
+          let x1 = map(p1.x, 0, capture.width, -vW / 2, vW / 2);
+          let y1 = map(p1.y, 0, capture.height, -vH / 2, vH / 2);
+          let x2 = map(p2.x, 0, capture.width, -vW / 2, vW / 2);
+          let y2 = map(p2.y, 0, capture.height, -vH / 2, vH / 2);
+          line(x1, y1, x2, y2);
+        }
+      }
     }
   }
   pop();
 }
 
-// 確保視窗大小改變時，畫布與影像位置能正確重新計算
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
