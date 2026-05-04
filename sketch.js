@@ -55,6 +55,21 @@ function draw() {
 
       line(x1, y1, x2, y2);
     }
+
+    // 新增：串接另一組編號，線條粗細為 1
+    strokeWeight(1);
+    const indices2 = [76, 77, 90, 180, 85, 16, 315, 404, 320, 307, 306, 408, 304, 303, 302, 11, 72, 73, 74, 184];
+    for (let i = 0; i < indices2.length - 1; i++) {
+      let p1 = face.keypoints[indices2[i]];
+      let p2 = face.keypoints[indices2[i + 1]];
+
+      let x1 = map(p1.x, 0, capture.width, 0, vWidth);
+      let y1 = map(p1.y, 0, capture.height, 0, vHeight);
+      let x2 = map(p2.x, 0, capture.width, 0, vWidth);
+      let y2 = map(p2.y, 0, capture.height, 0, vHeight);
+
+      line(x1, y1, x2, y2);
+    }
   }
   pop();
 }
