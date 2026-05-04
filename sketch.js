@@ -1,4 +1,6 @@
 let capture;
+let faceMesh;
+let faces = [];
 
 function setup() {
   // 建立全螢幕畫布
@@ -6,7 +8,11 @@ function setup() {
   // 擷取攝影機影像
   capture = createCapture(VIDEO);
   // 隱藏預設產生的 HTML 影片標籤，避免重疊顯示
-  capture.hide(); 
+  capture.hide();
+
+  // 初始化 FaceMesh 模型並開始偵測
+  faceMesh = ml5.faceMesh(capture, () => console.log("FaceMesh Ready"));
+  faceMesh.detectStart(capture, (results) => faces = results);
 }
 
 function draw() {
@@ -26,6 +32,30 @@ function draw() {
   translate(x + vWidth, y);
   scale(-1, 1);
   image(capture, 0, 0, vWidth, vHeight);
+
+  // 若偵測到臉部，則根據指定編號畫線
+  if (faces.length > 0) {
+    let face = faces[0];
+    stroke('red'); // 線條採用紅色
+    strokeWeight(15); // 粗細為 15
+    noFill();
+
+    // 指定的關鍵點編號順序
+    const indices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
+
+    for (let i = 0; i < indices.length - 1; i++) {
+      let p1 = face.keypoints[indices[i]];
+      let p2 = face.keypoints[indices[i + 1]];
+
+      // 將座標從攝影機尺寸映射到畫面顯示的尺寸 (50%)
+      let x1 = map(p1.x, 0, capture.width, 0, vWidth);
+      let y1 = map(p1.y, 0, capture.height, 0, vHeight);
+      let x2 = map(p2.x, 0, capture.width, 0, vWidth);
+      let y2 = map(p2.y, 0, capture.height, 0, vHeight);
+
+      line(x1, y1, x2, y2);
+    }
+  }
   pop();
 }
 
