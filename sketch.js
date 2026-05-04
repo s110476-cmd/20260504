@@ -38,7 +38,7 @@ function draw() {
   image(capture, 0, 0, vW, vH);
 
   // 如果偵測到臉部，則繪製指定點位的連線
-  if (faces.length > 0) {
+  if (faces.length > 0 && faces[0].keypoints) {
     let face = faces[0];
     // 定義多組需要連線的點位路徑
     let paths = [
@@ -46,23 +46,26 @@ function draw() {
       [76, 77, 90, 180, 85, 16, 315, 404, 320, 307, 306, 408, 304, 303, 302, 11, 72, 73, 74, 184]
     ];
     
+    noFill();          // 確保不會填滿嘴唇區域
     stroke(255, 0, 0); // 線條採用紅色
     strokeWeight(1);   // 粗細為1
     
     for (let indices of paths) {
+      beginShape();    // 使用 beginShape 可以更穩定地繪製連續線條
       for (let i = 0; i < indices.length - 1; i++) {
         let p1 = face.keypoints[indices[i]];
         let p2 = face.keypoints[indices[i+1]];
         
         if (p1 && p2) {
-          // 將攝影機原始座標映射到縮放後的畫布顯示區域
-          let x1 = map(p1.x, 0, capture.width, -vW / 2, vW / 2);
-          let y1 = map(p1.y, 0, capture.height, -vH / 2, vH / 2);
-          let x2 = map(p2.x, 0, capture.width, -vW / 2, vW / 2);
-          let y2 = map(p2.y, 0, capture.height, -vH / 2, vH / 2);
+          // 使用明確的尺寸 640x480 進行映射，避免 capture.width 為 0 的問題
+          let x1 = map(p1.x, 0, 640, -vW / 2, vW / 2);
+          let y1 = map(p1.y, 0, 480, -vH / 2, vH / 2);
+          let x2 = map(p2.x, 0, 640, -vW / 2, vW / 2);
+          let y2 = map(p2.y, 0, 480, -vH / 2, vH / 2);
           line(x1, y1, x2, y2);
         }
       }
+      endShape();
     }
   }
   pop();
