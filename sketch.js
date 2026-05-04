@@ -8,23 +8,17 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   capture = createCapture(VIDEO);
   capture.size(640, 480);
-  capture.elt.setAttribute('playsinline', ''); // 關鍵：防止手機上自動全螢幕，確保偵測運作
-  capture.hide(); // 隱藏預設產生的 HTML5 video 標籤
+  capture.hide();
 
-  // 等待影片元資料載入完成後再初始化 FaceMesh 模型
-  capture.elt.onloadedmetadata = () => {
-    console.log("攝影機影片元資料載入完成。");
-    // 初始化 FaceMesh 模型
-    faceMesh = ml5.faceMesh(capture, options, () => {
-      console.log("FaceMesh 模型載入完成");
-      modelLoaded = true; // 設定旗標為 true
-      // 開始持續偵測臉部
-      faceMesh.detectStart(capture, (results) => {
-        faces = results;
-        // 您可以在此處添加 console.log(faces.length); 來檢查是否有偵測到臉部
-        // console.log("偵測到的臉部數量:", faces.length);
-      });
-    });
+  // 直接初始化 FaceMesh，並傳入 capture
+  faceMesh = ml5.faceMesh(capture, options, () => {
+    console.log("FaceMesh 模型載入完成");
+    modelLoaded = true;
+  });
+
+  // 啟動偵測
+  faceMesh.detectStart(capture, (results) => {
+    faces = results;
   });
 }
 
@@ -46,13 +40,14 @@ function draw() {
   image(capture, 0, 0, vW, vH);
 
   // 如果偵測到臉部，則根據指定點位繪製紅色連線
-  if (modelLoaded && faces.length > 0 && faces[0].keypoints) { // 確保模型載入且有偵測到臉部
+  if (faces.length > 0 && faces[0].keypoints) {
     let face = faces[0];
     // 您指定的點位編號
     let indices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
     
-    stroke(255, 0, 0); // 設定線條為紅色
-    strokeWeight(1);   // 設定粗細為1
+    noFill();
+    stroke(255, 0, 0); 
+    strokeWeight(2);   // 稍微加粗一點確保看得見
     
     for (let i = 0; i < indices.length - 1; i++) {
       let p1 = face.keypoints[indices[i]];
