@@ -2,30 +2,45 @@ let capture;
 let facemesh;
 let predictions = [];
 let modelLoaded = false; // 新增變數來追蹤模型是否載入
+let cameraReady = false; // 追蹤攝影機是否準備就緒
+let cameraError = false; // 追蹤攝影機是否發生錯誤
 
 function setup() {
   createCanvas(windowWidth, windowHeight); // 全螢幕畫布
 
-  // 建立攝影機擷取
-  capture = createCapture(VIDEO);
-  capture.size(640, 480); // 設定擷取解析度以利座標計算
+  // 三星/Android 手機建議明確指定前鏡頭與不使用音訊
+  let constraints = {
+    video: {
+      facingMode: "user" // 強制使用前鏡頭
+    },
+    audio: false
+  };
+
+  capture = createCapture(constraints,
+    function(stream) {
+      console.log("Camera stream started successfully.");
+      cameraReady = true;
+      // 初始化 FaceMesh 模型
+      console.log("Initializing FaceMesh model...");
+      facemesh = ml5.faceMesh(capture, () => {
+        console.log("FaceMesh 模型準備就緒！");
+        modelLoaded = true;
+      });
+      // 開始持續偵測
+      facemesh.detectStart(capture, results => {
+        predictions = results;
+      });
+    },
+    function(err) {
+      console.error("Camera access error: ", err);
+      cameraError = true;
+    }
+  );
+
+  capture.size(windowWidth/2, windowHeight/2); // 配合手機螢幕動態調整
   capture.elt.setAttribute('playsinline', ''); // 修正 iOS 影片無法在網頁內播放的問題
   
-  // 強制隱藏預設的 video 標籤，避免影響畫布排版
   capture.hide();
-  capture.style('display', 'none');
-
-  console.log("Initializing FaceMesh model...");
-  // 初始化 FaceMesh 模型
-  facemesh = ml5.faceMesh(capture, () => {
-    console.log("FaceMesh 模型準備就緒！");
-    modelLoaded = true;
-  });
-  
-  // 開始持續偵測
-  facemesh.detectStart(capture, results => {
-    predictions = results;
-  });
 }
 
 function draw() {
@@ -33,11 +48,6 @@ function draw() {
 
   let w = width * 0.5;
   let h = height * 0.5;
-
-  // 動態檢查相機是否已經有影像寬度，若有則代表準備就緒
-  if (!cameraReady && capture.width > 0) {
-    cameraReady = true;
-  }
 
   push();
   imageMode(CENTER);
@@ -106,4 +116,8 @@ function draw() {
     pop();
   }
   pop();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }
