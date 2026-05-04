@@ -1,36 +1,22 @@
 let capture;
 let facemesh;
 let predictions = [];
-let cameraReady = false; // 新增變數來追蹤攝影機是否準備就緒
 let modelLoaded = false; // 新增變數來追蹤模型是否載入
-let cameraError = false; // 新增變數來追蹤攝影機是否發生錯誤
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
-  capture = createCapture(VIDEO, (stream) => {
-    // 當攝影機串流準備就緒時，這個回呼函數會被執行
-    console.log("Camera stream ready:", stream);
-    cameraReady = true;
-  });
+  createCanvas(windowWidth, windowHeight); // 全螢幕畫布
+
+  // 建立攝影機擷取
+  capture = createCapture(VIDEO);
   capture.size(640, 480); // 設定擷取解析度以利座標計算
   capture.elt.setAttribute('playsinline', ''); // 修正 iOS 影片無法在網頁內播放的問題
-  capture.hide(); // 隱藏預設產生的 HTML 影片元件，只顯示在畫布上
-
-  // 監聽攝影機影像元素的 loadedmetadata 事件，檢查是否有影像尺寸
-  capture.elt.onloadedmetadata = () => {
-    if (!capture.elt.videoWidth || !capture.elt.videoHeight) {
-      console.error("Camera stream has no dimensions, might be an error or permission issue.");
-      cameraError = true;
-    }
-  };
-  // 監聽攝影機影像元素的 error 事件
-  capture.elt.onerror = (e) => {
-    console.error("Camera error:", e);
-    cameraError = true;
-  };
+  
+  // 強制隱藏預設的 video 標籤，避免影響畫布排版
+  capture.hide();
+  capture.style('display', 'none');
 
   console.log("Initializing FaceMesh model...");
-  // 初始化 FaceMesh 模型 (修正為 ml5 v1.0.0+ 的語法)
+  // 初始化 FaceMesh 模型
   facemesh = ml5.faceMesh(capture, () => {
     console.log("FaceMesh 模型準備就緒！");
     modelLoaded = true;
@@ -47,6 +33,11 @@ function draw() {
 
   let w = width * 0.5;
   let h = height * 0.5;
+
+  // 動態檢查相機是否已經有影像寬度，若有則代表準備就緒
+  if (!cameraReady && capture.width > 0) {
+    cameraReady = true;
+  }
 
   push();
   imageMode(CENTER);
@@ -68,46 +59,51 @@ function draw() {
     textAlign(CENTER, CENTER);
     text("正在載入相機...", 0, 0);
   } else if (!modelLoaded) {
+    // 相機好了但模型還沒好：先顯示相機畫面，並提示模型載入中
+    push();
+    scale(-1, 1);
+    image(capture, 0, 0, w, h);
+    pop();
+    
     scale(1, 1); // 確保載入文字不被翻轉
     fill(0); // 黑色文字
     textSize(24);
     textAlign(CENTER, CENTER);
     text("正在載入臉部辨識模型...", 0, 0);
-  } else if (predictions.length === 0) {
-    scale(1, 1); // 確保訊息不被翻轉
-    fill(0); // 黑色文字
-    text("未偵測到臉部，請確保臉部在畫面中。", 0, 0);
   } else {
-    // 水平翻轉影像（實作左右顛倒）
-    scale(-1, 1);
-
-    // 繪製影像，尺寸為全螢幕的一半
+    // 相機與模型都準備好了
+    push();
+    scale(-1, 1); // 水平翻轉影像（實作左右顛倒）
     image(capture, 0, 0, w, h);
 
-    // 如果有偵測到臉部，繪製嘴唇連線
     if (predictions.length > 0) {
       let lipIndices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
-      // ml5 v1.x 的座標存在 keypoints 陣列中
       let keypoints = predictions[0].keypoints;
 
       stroke(255, 0, 0); // 線條採用紅色
       strokeWeight(1);   // 粗細為 1
       for (let i = 0; i < lipIndices.length; i++) {
         let startIdx = lipIndices[i];
-        let endIdx = lipIndices[(i + 1) % lipIndices.length]; // 取得下一個點，最後一個點連回第一個點
-
-        // v1.x 的每個 keypoint 是一個物件 {x, y}
+        let endIdx = lipIndices[(i + 1) % lipIndices.length];
         let p1 = keypoints[startIdx];
         let p2 = keypoints[endIdx];
 
-        let x1 = map(p1.x, 0, capture.width, -w / 2, w / 2);
-        let y1 = map(p1.y, 0, capture.height, -h / 2, h / 2);
-        let x2 = map(p2.x, 0, capture.width, -w / 2, w / 2);
-        let y2 = map(p2.y, 0, capture.height, -h / 2, h / 2);
-
-        line(x1, y1, x2, y2); // 使用 line 指令串接
+        if (p1 && p2) {
+          let x1 = map(p1.x, 0, capture.width, -w / 2, w / 2);
+          let y1 = map(p1.y, 0, capture.height, -h / 2, h / 2);
+          let x2 = map(p2.x, 0, capture.width, -w / 2, w / 2);
+          let y2 = map(p2.y, 0, capture.height, -h / 2, h / 2);
+          line(x1, y1, x2, y2);
+        }
       }
+    } else {
+      pop(); // 暫時切換回非翻轉座標繪製文字
+      fill(0);
+      textAlign(CENTER, CENTER);
+      text("未偵測到臉部", 0, 0);
+      push(); // 恢復環境平衡
     }
+    pop();
   }
   pop();
 }
