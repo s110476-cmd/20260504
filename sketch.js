@@ -41,29 +41,25 @@ function draw() {
   // 如果偵測到臉部，則繪製指定點位的連線
   if (faces.length > 0 && faces[0].keypoints) {
     let face = faces[0];
-    // 定義多組需要連線的點位路徑
-    let paths = [
-      [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291],
-      [76, 77, 90, 180, 85, 16, 315, 404, 320, 307, 306, 408, 304, 303, 302, 11, 72, 73, 74, 184]
-    ];
+    // 您指定的點位編號
+    let indices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
     
-    noFill();          // 確保不會填滿嘴唇區域
     stroke(255, 0, 0); // 線條採用紅色
     strokeWeight(1);   // 粗細為1
     
-    for (let indices of paths) {
-      beginShape();
-      for (let index of indices) {
-        let p = face.keypoints[index];
-        if (p) {
-          // 使用 capture.width/height 取代硬編碼的 640/480
-          // 這能解決手機端因鏡頭比例不同導致的座標偏移問題
-          let x = map(p.x, 0, capture.width, -vW / 2, vW / 2);
-          let y = map(p.y, 0, capture.height, -vH / 2, vH / 2);
-          vertex(x, y);
-        }
+    for (let i = 0; i < indices.length - 1; i++) {
+      let p1 = face.keypoints[indices[i]];
+      let p2 = face.keypoints[indices[i + 1]];
+
+      if (p1 && p2) {
+        // 將攝影機座標映射到畫布上的影像位置
+        let x1 = map(p1.x, 0, capture.width, -vW / 2, vW / 2);
+        let y1 = map(p1.y, 0, capture.height, -vH / 2, vH / 2);
+        let x2 = map(p2.x, 0, capture.width, -vW / 2, vW / 2);
+        let y2 = map(p2.y, 0, capture.height, -vH / 2, vH / 2);
+
+        line(x1, y1, x2, y2);
       }
-      endShape();
     }
   }
   pop();
