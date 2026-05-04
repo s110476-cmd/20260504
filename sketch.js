@@ -7,6 +7,7 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   capture = createCapture(VIDEO);
   capture.size(640, 480);
+  capture.elt.setAttribute('playsinline', ''); // 關鍵：防止手機上自動全螢幕，確保偵測運作
   capture.hide(); // 隱藏預設產生的 HTML5 video 標籤，只在畫布上呈現
 
   // 初始化 FaceMesh 模型
@@ -55,9 +56,10 @@ function draw() {
       for (let index of indices) {
         let p = face.keypoints[index];
         if (p) {
-          // 將攝影機座標 (640x480) 映射到畫布顯示區域
-          let x = map(p.x, 0, 640, -vW / 2, vW / 2);
-          let y = map(p.y, 0, 480, -vH / 2, vH / 2);
+          // 使用 capture.width/height 取代硬編碼的 640/480
+          // 這能解決手機端因鏡頭比例不同導致的座標偏移問題
+          let x = map(p.x, 0, capture.width, -vW / 2, vW / 2);
+          let y = map(p.y, 0, capture.height, -vH / 2, vH / 2);
           vertex(x, y);
         }
       }
